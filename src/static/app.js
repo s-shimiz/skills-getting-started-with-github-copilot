@@ -20,12 +20,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
+        const participantItems = details.participants.length > 0
+          ? details.participants.map(p =>
+              `<li data-email="${p}" data-activity="${name}">
+                <span class="participant-email">${p}</span>
+                <button class="delete-btn" title="Unregister">&#x1F5D1;</button>
+              </li>`
+            ).join("")
+          : "<li class='no-participants'>No participants yet</li>";
+
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
+          <div class="participants-section">
+            <p class="participants-title">Participants:</p>
+            <ul class="participants-list">${participantItems}</ul>
+          </div>
         `;
+
+        activityCard.querySelectorAll(".delete-btn").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const li = btn.closest("li");
+            const email = li.dataset.email;
+            const activity = li.dataset.activity;
+            try {
+              const res = await fetch(
+                `/activities/${encodeURIComponent(activity)}/signup?email=${encodeURIComponent(email)}`,
+                { method: "DELETE" }
+              );
+              if (res.ok) {
+                activitiesList.innerHTML = "";
+                activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
+                fetchActivities();
+              }
+            } catch (error) {
+              console.error("Error unregistering participant:", error);
+            }
+          });
+        });
 
         activitiesList.appendChild(activityCard);
 
@@ -62,6 +96,9 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        activitiesList.innerHTML = "";
+        activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
